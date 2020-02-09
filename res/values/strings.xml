@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Step Diary</string>
+    <string name="desc">Daily Step Count</string>
+    <string name="title1">Total</string>
+    <string name="unit1">Steps</string>
+
+    <string name="move_before">Move Day Before</string>
+    <string name="move_next">Move Day Next</string>
+
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="connect_to_shealth">Connect to Samsung Health</string>
+
+    <string name="notice">Notice</string>
+    <string name="msg_perm_acquired">All permissions should be acquired</string>
+    <string name="msg_conn_not_available">Connection with Samsung Health is not available</string>
+    <string name="msg_req_install">Please install Samsung Health</string>
+    <string name="msg_req_upgrade">Please upgrade Samsung Health</string>
+    <string name="msg_req_enable">Please enable Samsung Health</string>
+    <string name="msg_req_agree">Please agree to Samsung Health policy</string>
+    <string name="msg_req_available">Please make Samsung Health available</string>
+    <string name="channel_name">Sync Service</string>
+    <string name="channel_description">Notifications sent from background service</string>
+    <string name="syncButtonText">Sync</string>
+    <string name="sync_data_for_title">Sync Data for</string>
+    <string name="sync_7_days">7 Days</string>
+    <string name="sync_30days">Sync</string>
+    <string name="synctoday">Today</string>
+    <string name="enter_number_of_days_to_sync_for">enter number of days to sync for</string>
+    <string name="_30">5</string>
+</resources>
