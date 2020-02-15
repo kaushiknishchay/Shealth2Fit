@@ -8,3 +8,6 @@ gradle
 .idea
 .DS_Store
 .DS_STORE
+stepdiary.iml
+*.aab
+output.json
