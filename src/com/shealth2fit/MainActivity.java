@@ -219,9 +219,9 @@ public class MainActivity extends AppCompatActivity {
        GoogleSignIn.getLastSignedInAccount(mContext),
        fitnessOptions
       );
-      Log.i(TAG, "Got GFit Permissions");
+      Log.i(TAG, "Got Google Fit Permissions");
     } else {
-//      setupWorker();
+      setupWorker();
     }
   }
 
@@ -233,7 +233,7 @@ public class MainActivity extends AppCompatActivity {
      .build();
 
     PeriodicWorkRequest saveRequest =
-     new PeriodicWorkRequest.Builder(SyncWorker.class, 1, TimeUnit.MINUTES)
+     new PeriodicWorkRequest.Builder(SyncWorker.class, 6, TimeUnit.HOURS)
       .setConstraints(constraints)
       .addTag(SYNC_WORKER_TAG)
       .build();
@@ -298,7 +298,7 @@ public class MainActivity extends AppCompatActivity {
         return;
       }
       case REQUEST_OAUTH_REQUEST_CODE: {
-//        setupWorker();
+        setupWorker();
         return;
       }
 
