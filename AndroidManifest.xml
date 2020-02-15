@@ -13,21 +13,9 @@
     <application
         android:name="com.shealth2fit.BaseApplication"
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
-        <service
-            android:name=".SyncService"
-            android:enabled="true"
-            android:exported="true"></service>
-
-        <receiver
-            android:name=".SyncBootReceiver"
-            android:enabled="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED"></action>
-            </intent-filter>
-        </receiver>
 
         <provider
             android:name="androidx.work.impl.WorkManagerInitializer"
@@ -48,6 +36,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service android:name=".SyncService" />
     </application>
 
 </manifest>
