@@ -44,14 +44,14 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
+
+import static com.shealth2fit.util.DateUtil.TODAY_START_UTC_TIME;
 
 
 public class StepCountReader {
 
   public static final String STEP_SUMMARY_DATA_TYPE_NAME = "com.samsung.shealth.step_daily_trend";
-  public static final long TODAY_START_UTC_TIME;
-  public static final long ONE_DAY = 24 * 60 * 60 * 1000;
+  static final long ONE_DAY = 24 * 60 * 60 * 1000;
   private static final String TAG = "StepCountReader";
   private static final String PROPERTY_TIME = "day_time";
   private static final String PROPERTY_COUNT = "count";
@@ -60,28 +60,12 @@ public class StepCountReader {
   private static final String ALIAS_DEVICE_UUID = "deviceuuid";
   private static final String ALIAS_BINNING_TIME = "binning_time";
 
-  static {
-    TODAY_START_UTC_TIME = getTodayStartUtcTime();
-  }
-
   private final HealthDataResolver mResolver;
   private final StepCountObserver mObserver;
 
-  public StepCountReader(HealthDataStore store, StepCountObserver observer) {
+  StepCountReader(HealthDataStore store, StepCountObserver observer) {
     mResolver = new HealthDataResolver(store, null);
     mObserver = observer;
-  }
-
-  private static long getTodayStartUtcTime() {
-    Calendar today = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-    Log.d(MainActivity.TAG, "Today : " + today.getTimeInMillis());
-
-    today.set(Calendar.HOUR_OF_DAY, 0);
-    today.set(Calendar.MINUTE, 0);
-    today.set(Calendar.SECOND, 0);
-    today.set(Calendar.MILLISECOND, 0);
-
-    return today.getTimeInMillis();
   }
 
   private static List<StepBinningData> getBinningData(byte[] zip, long startTime) {
@@ -114,7 +98,7 @@ public class StepCountReader {
     return binningDataList;
   }
 
-  public void readSleepData() {
+  void readSleepData() {
     ReadRequest request = new ReadRequest.Builder()
      .setDataType(HealthConstants.Sleep.HEALTH_DATA_TYPE)
      .setTimeAfter(TODAY_START_UTC_TIME)
@@ -288,20 +272,17 @@ public class StepCountReader {
       startTimeLoop += StepCountReader.ONE_DAY;
     }
 
-    Collections.sort(binningDataList, new Comparator<StepBinningData>() {
-      @Override
-      public int compare(StepBinningData o1, StepBinningData o2) {
-        Long time1 = o1.getTime();
-        Long time2 = o2.getTime();
-        return time1.compareTo(time2);
-      }
+    Collections.sort(binningDataList, (o1, o2) -> {
+      Long time1 = o1.getTime();
+      Long time2 = o2.getTime();
+      return time1.compareTo(time2);
     });
 
     Log.i(TAG, "readStepDataForRange: " + binningDataList.size());
     Log.i(TAG, "totalCount: " + totalCount);
 
     mObserver.onChanged(startTime, totalCount);
-    mObserver.onBinningDataChanged(binningDataList);
+    mObserver.onBinningDataChanged(totalCount, binningDataList);
   }
 
   private void readStepCountBinning(final long startTime, String deviceUuid) {
@@ -359,6 +340,8 @@ public class StepCountReader {
 
   public interface StepCountObserver {
     void onChanged(long startTime, int count);
+
+    void onBinningDataChanged(int totalStepCount, List<StepBinningData> binningCountList);
 
     void onBinningDataChanged(List<StepBinningData> binningCountList);
   }

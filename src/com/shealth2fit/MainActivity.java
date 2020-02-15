@@ -22,6 +22,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -36,29 +37,16 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.Observer;
 import androidx.work.Constraints;
-import androidx.work.Data;
-import androidx.work.OneTimeWorkRequest;
 import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.fitness.Fitness;
 import com.google.android.gms.fitness.FitnessOptions;
-import com.google.android.gms.fitness.data.DataPoint;
-import com.google.android.gms.fitness.data.DataSet;
-import com.google.android.gms.fitness.data.DataSource;
 import com.google.android.gms.fitness.data.DataType;
-import com.google.android.gms.fitness.data.Field;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.samsung.android.sdk.healthdata.HealthConnectionErrorResult;
 import com.samsung.android.sdk.healthdata.HealthDataStore;
 import com.samsung.android.sdk.healthdata.HealthPermissionManager.PermissionKey;
@@ -69,7 +57,6 @@ import com.shealth2fit.util.SamsungHealthUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -85,10 +72,11 @@ import butterknife.OnClick;
 import static com.shealth2fit.SyncWorker.DATE_END_TIMESTAMP_KEY;
 import static com.shealth2fit.SyncWorker.DATE_START_TIMESTAMP_KEY;
 import static com.shealth2fit.SyncWorker.SYNC_WORKER_TAG;
+import static com.shealth2fit.util.DateUtil.TODAY_START_UTC_TIME;
 
 public class MainActivity extends AppCompatActivity {
 
-  public static final String TAG = "StepDiary";
+  public static final String TAG = "SHealth2Fit";
   private static final int REQUEST_OAUTH_REQUEST_CODE = 187;
   private static final int MY_PERMISSIONS_REQUEST_ACTIVITY_RECOGNITION = 11;
 
@@ -164,6 +152,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBinningDataChanged(int totalStepCount, List<StepCountReader.StepBinningData> binningCountList) {
+
+    }
+
+    @Override
     public void onBinningDataChanged(List<StepCountReader.StepBinningData> stepBinningDataList) {
       updateBinningChartView(stepBinningDataList);
     }
@@ -183,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
     NotificationUtil.createNotificationChannel(mContext);
 
     // Get the start time of today in local
-    mCurrentStartTime = StepCountReader.TODAY_START_UTC_TIME;
+    mCurrentStartTime = TODAY_START_UTC_TIME;
     mDayTv.setText(getFormattedTime());
 
     // Create a HealthDataStore instance and set its listener
@@ -228,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
       );
       Log.i(TAG, "Got GFit Permissions");
     } else {
-      setupWorker();
+//      setupWorker();
     }
   }
 
@@ -257,7 +250,7 @@ public class MainActivity extends AppCompatActivity {
   @OnClick(R.id.sync7DaysButton)
   public void sync7DaysOnClick() {
     Log.i(TAG, "Sync for last 7 Days");
-    long endTimeInMillis = StepCountReader.TODAY_START_UTC_TIME;
+    long endTimeInMillis = TODAY_START_UTC_TIME;
     long startTimeInMillis = endTimeInMillis - (StepCountReader.ONE_DAY * 7);
 
     syncDataForDate(startTimeInMillis, endTimeInMillis);
@@ -265,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
 
   @OnClick(R.id.sync30DaysButton)
   public void sync30DaysOnClick() {
-    long endTimeInMillis = StepCountReader.TODAY_START_UTC_TIME;
+    long endTimeInMillis = TODAY_START_UTC_TIME;
 
     int daysCount = Integer.parseInt(mNumberOfDays.getText().toString());
     Log.i(TAG, "Sync for last " + daysCount + " Days");
@@ -279,37 +272,10 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void syncDataForDate(long startTimeInMillis, long endTimeInMillis) {
-    String workerTag = "Date_" + startTimeInMillis + "_" + endTimeInMillis;
-
-    workManager.cancelAllWorkByTag(workerTag);
-
-    Calendar cal = Calendar.getInstance();
-    cal.setTimeInMillis(startTimeInMillis);
-    String dateString = cal.getTime().toString();
-
-    Log.i(TAG, "Sync for " + dateString);
-    Data.Builder builder = new Data.Builder();
-    builder.putLong(DATE_START_TIMESTAMP_KEY, startTimeInMillis);
-    builder.putLong(DATE_END_TIMESTAMP_KEY, endTimeInMillis);
-
-    OneTimeWorkRequest syncWorkRequest =
-     new OneTimeWorkRequest.Builder(SyncWorker.class)
-      .setInputData(builder.build())
-      .addTag(workerTag)
-//      .setInitialDelay(1, TimeUnit.SECONDS)
-      .build();
-
-    workManager.enqueue(syncWorkRequest);
-
-    workManager.getWorkInfoByIdLiveData(syncWorkRequest.getId())
-     .observe(this, new Observer<WorkInfo>() {
-       @Override
-       public void onChanged(@Nullable WorkInfo workInfo) {
-         if (workInfo != null && workInfo.getState() == WorkInfo.State.SUCCEEDED) {
-           Log.i(TAG, "Work finished!");
-         }
-       }
-     });
+    Intent syncServiceIntent = new Intent(this, SyncService.class);
+    syncServiceIntent.putExtra(DATE_START_TIMESTAMP_KEY, startTimeInMillis);
+    syncServiceIntent.putExtra(DATE_END_TIMESTAMP_KEY, endTimeInMillis);
+    startService(syncServiceIntent);
   }
 
   @Override
@@ -332,7 +298,7 @@ public class MainActivity extends AppCompatActivity {
         return;
       }
       case REQUEST_OAUTH_REQUEST_CODE: {
-        setupWorker();
+//        setupWorker();
         return;
       }
 
@@ -383,10 +349,6 @@ public class MainActivity extends AppCompatActivity {
 //            insertData(startTime, Integer.parseInt(count));
     });
   }
-
-    /*
-      Functions related to Store permission setup
-     */
 
   private void updateBinningChartView(List<StepCountReader.StepBinningData> stepBinningDataList) {
     // the following code will be replaced with chart drawing code
@@ -452,87 +414,6 @@ public class MainActivity extends AppCompatActivity {
     alert.show();
   }
 
-  /**
-   * Creates a {@link DataSet} and inserts it into user's Google Fit history.
-   */
-  private Task<Void> insertData(final long startTime, final Integer stepCount) {
-    // Create a new dataset and insertion request.
-    DataSet dataSet = insertFitnessData(startTime, stepCount);
-
-    // Then, invoke the History API to insert the data.
-    Log.i(TAG, "Inserting the dataset in the History API.");
-
-    Log.i(TAG, "insertData: mContext " + mContext);
-    Log.i(TAG, "insertData: mActivity " + mActivity);
-    if (mContext != null) {
-      return Fitness.getHistoryClient(mActivity, GoogleSignIn.getAccountForExtension(mContext, fitnessOptions))
-       .insertData(dataSet)
-       .addOnCompleteListener(
-        new OnCompleteListener<Void>() {
-          @Override
-          public void onComplete(@NonNull Task<Void> task) {
-            if (task.isSuccessful()) {
-              // At this point, the data has been inserted and can be read.
-              Log.i(TAG, "Data insert was successful!");
-            } else {
-              Log.e(TAG, "There was a problem inserting the dataset.", task.getException());
-            }
-          }
-        });
-    }
-    return null;
-  }
-
-  /**
-   * Creates and returns a {@link DataSet} of step count data for insertion using the History API.
-   */
-  private DataSet insertFitnessData(final long startTime, final Integer stepCount) {
-    Log.i(TAG, "Creating a new data insert request.");
-
-    // [START build_insert_data_request]
-    // Set a start and end time for our data, using a start time of 1 hour before this moment.
-    Calendar cal = Calendar.getInstance();
-    Date startDate = new Date(startTime);
-    cal.setTime(startDate);
-    long startSec = cal.getTimeInMillis();
-
-    cal.add(Calendar.MINUTE, +10);
-    long endTime = cal.getTimeInMillis();
-    Log.i(TAG, "startDate " + startDate.toString() + "--" + startTime);
-    Log.i(TAG, "endTime " + endTime);
-
-    // Create a data source
-    DataSource dataSource =
-     new DataSource.Builder()
-      .setAppPackageName(mContext)
-      .setDataType(DataType.TYPE_STEP_COUNT_DELTA)
-      .setStreamName(TAG + " - step count")
-      .setType(DataSource.TYPE_RAW)
-      .build();
-
-    // Create a data set
-    int stepCountDelta = stepCount;
-    DataSet dataSet = DataSet.create(dataSource);
-
-    if (stepCount > 0) {
-      // For each data point, specify a start time, end time, and the data value -- in this case,
-      // the number of new steps.
-      DataPoint dataPoint =
-       dataSet.createDataPoint().setTimeInterval(startSec, endTime, TimeUnit.MILLISECONDS);
-      dataPoint.getValue(Field.FIELD_STEPS).setInt(stepCountDelta);
-      try {
-        dataSet.add(dataPoint);
-      } catch (Exception e) {
-        Log.i(TAG, "dataPoint Fail: " + dataPoint.toString());
-        Log.i(TAG, "Failed to add Data: " + e.getStackTrace().toString());
-      }
-      // [END build_insert_data_request]
-
-      return dataSet;
-    }
-    return null;
-  }
-
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
     super.onCreateOptionsMenu(menu);
@@ -586,8 +467,12 @@ public class MainActivity extends AppCompatActivity {
         convertView = getLayoutInflater().inflate(android.R.layout.simple_list_item_2, null);
       }
 
-      ((TextView) convertView.findViewById(android.R.id.text1)).setText(mDataList.get(position).count + " steps");
-      ((TextView) convertView.findViewById(android.R.id.text2)).setText(new Date(mDataList.get(position).time).toString());
+      ((TextView) convertView.findViewById(android.R.id.text1))
+       .setText(mDataList.get(position).count + " steps");
+
+      ((TextView) convertView.findViewById(android.R.id.text2))
+       .setText(new Date(mDataList.get(position).time).toString());
+
       return convertView;
     }
   }

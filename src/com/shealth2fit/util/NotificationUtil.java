@@ -36,14 +36,18 @@ public class NotificationUtil {
     }
   }
 
-
   public static NotificationCompat.Builder sendNotification(Context mContext, String title, String content, String channelId) {
+    return sendNotification(mContext, title, content, channelId, false);
+  }
+
+  public static NotificationCompat.Builder sendNotification(Context mContext, String title, String content, String channelId, boolean isOngoing) {
 
     NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, channelId)
-     .setSmallIcon(R.drawable.ic_launcher)
+     .setSmallIcon(R.mipmap.ic_launcher)
      .setContentTitle(title)
      .setPriority(NotificationCompat.PRIORITY_LOW)
-     .setContentText(content);
+     .setContentText(content)
+     .setOngoing(isOngoing);
 
 
     Intent targetIntent = new Intent(mContext, MainActivity.class);

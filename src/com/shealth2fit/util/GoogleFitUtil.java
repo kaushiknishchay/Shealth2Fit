@@ -20,13 +20,14 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.shealth2fit.StepCountReader;
 
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import static com.shealth2fit.util.DateUtil.getDateStringFromMillis;
 
 public class GoogleFitUtil {
   public static final long ONE_DAY = 24 * 60 * 60 * 1000;
@@ -37,13 +38,11 @@ public class GoogleFitUtil {
 
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(startTime); // compute start of the day for the timestamp
-
     cal.add(Calendar.DATE, +1);
     long endTime = cal.getTimeInMillis();
 
-    java.text.DateFormat dateFormat = DateFormat.getDateInstance();
-    Log.i(TAG, "Range Start: " + dateFormat.format(startTime));
-    Log.i(TAG, "Range End: " + dateFormat.format(endTime));
+    Log.i(TAG, "Range Start: " + getDateStringFromMillis(startTime));
+    Log.i(TAG, "Range End: " + getDateStringFromMillis(endTime));
 
     DataReadRequest readRequest =
      new DataReadRequest.Builder()
@@ -51,7 +50,6 @@ public class GoogleFitUtil {
       .bucketByTime(1, TimeUnit.DAYS)
       .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
       .build();
-
 
     return Fitness
      .getHistoryClient(mContext, Objects.requireNonNull(GoogleSignIn.getLastSignedInAccount(mContext)))
@@ -169,7 +167,6 @@ public class GoogleFitUtil {
         });
     }
   }
-
 
   public static List<StepCountReader.StepBinningData> getBinDataFromResponse(DataReadResponse daysStepData) {
     List<StepCountReader.StepBinningData> binningDataList = new ArrayList<>();
