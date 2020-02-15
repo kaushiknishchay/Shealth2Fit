@@ -1,14 +1,14 @@
 buildscript {
-    ext.work_version = "2.3.0"
+    ext.work_version = "2.3.1"
     repositories {
         maven {
             url "https://repo1.maven.org/maven2"
         }
-        google()
         jcenter()
+        google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.2.0'
+        classpath 'com.android.tools.build:gradle:3.5.3'
     }
 }
 
@@ -16,8 +16,8 @@ repositories {
     maven {
         url "https://repo1.maven.org/maven2"
     }
-    google()
     jcenter()
+    google()
 }
 
 apply plugin: 'com.android.application'
@@ -68,5 +68,12 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildTypes {
+        release {
+            minifyEnabled = true
+            multiDexEnabled = true
+            shrinkResources = true
+        }
     }
 }
