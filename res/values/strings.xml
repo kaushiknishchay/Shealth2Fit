@@ -29,7 +29,9 @@
     <string name="sync_7_days">7 Days</string>
     <string name="sync_30days">Sync</string>
     <string name="synctoday">Today</string>
-    <string name="enter_number_of_days_to_sync_for">enter number of days to sync for</string>
+    <string name="enter_number_of_days_to_sync_for">enter number of days</string>
     <string name="_30">5</string>
     <string name="splash_content_disclaimer">SHealth2Fit works with Samsung Health to sync data from Samsung Health app to Google Fit</string>
+    <string name="single_day_mode">Single Day Mode</string>
+    <string name="range_mode">Range Mode</string>
 </resources>

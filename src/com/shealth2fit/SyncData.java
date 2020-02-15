@@ -12,26 +12,26 @@ import com.shealth2fit.util.NotificationUtil;
 
 import java.util.List;
 
-import static com.shealth2fit.util.DateUtil.getDateStringFromMillis;
+import static com.shealth2fit.util.DateUtil.getDateStringFromUTCMillis;
 import static com.shealth2fit.util.NotificationUtil.SYNC_WORKER_CHANNEL_ID;
 
 class SyncData {
 
   private final static String TAG = "SyncData";
   private final Context mContext;
-  private final long mStartTimeStamp;
-  private final long mEndTimeStamp;
-  private String mEndDateString;
-  private String mStartDateString;
+  private final long mUTCStartTimeStamp;
+  private final long mUTCEndTimeStamp;
+  private String mLocalEndDateString;
+  private String mLocalStartDateString;
   private HealthDataStore mStore;
   private StepCountReader mReporter;
 
-  SyncData(Context context, long mStartTime, long mEndTime) {
+  SyncData(Context context, long mUTCStartTime, long mUTCEndTime) {
     mContext = context;
-    mStartTimeStamp = mStartTime;
-    mEndTimeStamp = mEndTime;
-    mStartDateString = getDateStringFromMillis(mStartTime);
-    mEndDateString = getDateStringFromMillis(mEndTime);
+    mUTCStartTimeStamp = mUTCStartTime;
+    mUTCEndTimeStamp = mUTCEndTime;
+    mLocalStartDateString = getDateStringFromUTCMillis(mUTCStartTime);
+    mLocalEndDateString = getDateStringFromUTCMillis(mUTCEndTime);
   }
 
   void start() {
@@ -40,12 +40,12 @@ class SyncData {
     NotificationUtil.sendNotification(
      mContext,
      "Starting activity sync",
-     mStartDateString + "-" + mEndDateString,
+     mLocalStartDateString + "-" + mLocalEndDateString,
      SYNC_WORKER_CHANNEL_ID,
      true
     );
 
-    Log.i(TAG, "Sync Start for " + mStartDateString + "-" + mEndDateString);
+    Log.i(TAG, "Sync Start for " + mLocalStartDateString + "-" + mLocalEndDateString);
 
     try {
       Thread storeConnectThread = new Thread() {
@@ -76,12 +76,12 @@ class SyncData {
     NotificationUtil.sendNotification(
      mContext,
      "Starting activity sync",
-     mStartDateString + "-" + mEndDateString,
+     mLocalStartDateString + "-" + mLocalEndDateString,
      SYNC_WORKER_CHANNEL_ID,
      false
     );
 
-    Log.i(TAG, "Sync Start for " + mStartDateString + "-" + mEndDateString);
+    Log.i(TAG, "Sync Start for " + mLocalStartDateString + "-" + mLocalEndDateString);
 
     try {
       mStore = new HealthDataStore(mContext, mStoreConnectionListener);
@@ -98,7 +98,7 @@ class SyncData {
     @Override
     public void onConnected() {
       Log.i(TAG, "onConnected: Store Connected");
-      mReporter.readStepDataForRange(mStartTimeStamp, mEndTimeStamp);
+      mReporter.readStepDataForRange(mUTCStartTimeStamp, mUTCEndTimeStamp);
     }
 
     @Override
@@ -107,7 +107,7 @@ class SyncData {
       NotificationUtil.sendNotification(
        mContext,
        "Samsung Health Connection Failed",
-       mStartDateString + "-" + mEndDateString,
+       mLocalStartDateString + "-" + mLocalEndDateString,
        SYNC_WORKER_CHANNEL_ID
       );
     }
@@ -130,7 +130,7 @@ class SyncData {
       NotificationUtil.sendNotification(
        mContext,
        "Fetched Data from Samsung Health",
-       mStartDateString + "-" + mEndDateString,
+       mLocalStartDateString + "-" + mLocalEndDateString,
        SYNC_WORKER_CHANNEL_ID,
        true
       );
@@ -143,7 +143,7 @@ class SyncData {
 
       NotificationUtil.sendNotification(
        mContext,
-       "Synced: " + mStartDateString + "-" + mEndDateString,
+       "Synced: " + mLocalStartDateString + "-" + mLocalEndDateString,
        "Activity Count: " + sHealthRecordedSteps.size() + " (" + totalStepCount + " steps)",
        SYNC_WORKER_CHANNEL_ID,
        false

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+<color name="calendar_title">#FFFFFF</color>
+<color name="selected_date_circle_color">#FF9800</color>
+<color name="calendar_header">#FF5722</color>
+<color name="range_color">#FFFAC9</color>
+</resources>

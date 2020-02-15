@@ -2,10 +2,10 @@ package com.shealth2fit.util;
 
 import android.util.Log;
 
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
 import java.util.TimeZone;
 
 public class DateUtil {
@@ -28,16 +28,37 @@ public class DateUtil {
     return today.getTimeInMillis();
   }
 
-  public static Date getDateFromMillis(long milliSeconds) {
+  private static Date getDateFromMillis(long milliSeconds) {
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(milliSeconds);
     return cal.getTime();
   }
 
-  public static String getDateStringFromMillis(long milliSeconds) {
+  private static Date getDateFromUTCMillis(long utcMilliSeconds) {
+    Calendar calendar = Calendar.getInstance();
+    TimeZone localTimeZone = TimeZone.getDefault();
+    calendar.setTimeInMillis(utcMilliSeconds - localTimeZone.getRawOffset());
+    return calendar.getTime();
+  }
+
+  static String getDateStringFromMillis(long milliSeconds) {
     Date date = getDateFromMillis(milliSeconds);
-    SimpleDateFormat dateFormat = new SimpleDateFormat(" dd MMM yyyy ", Locale.getDefault());
+    DateFormat dateFormat = SimpleDateFormat.getDateInstance();
     return dateFormat.format(date);
   }
 
+  public static String getDateStringFromUTCMillis(long utcMilliSeconds) {
+    Date date = getDateFromUTCMillis(utcMilliSeconds);
+    DateFormat dateFormat = SimpleDateFormat.getDateInstance();
+    return dateFormat.format(date);
+  }
+
+  public static Calendar toUTC(Calendar localDate) {
+    TimeZone localDateTimeZone = localDate.getTimeZone();
+
+    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    calendar.setTimeInMillis((localDate.getTimeInMillis() + localDateTimeZone.getRawOffset()));
+
+    return calendar;
+  }
 }

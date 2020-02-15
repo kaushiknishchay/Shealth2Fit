@@ -32,6 +32,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:17.0.0'
     implementation "androidx.work:work-runtime:$work_version"
     implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'com.archit.calendar:awesome-calendar:1.1.6'
     implementation("com.google.guava:guava:28.2-android")
 }
 

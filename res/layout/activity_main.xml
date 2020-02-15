@@ -1,82 +1,51 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:custom="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     tools:context="com.shealth2fit.MainActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:background="#00000000"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="20dp">
+
+        <Switch
+            android:id="@+id/singleMultiModeSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:checked="false"
+            android:gravity="center"
+            android:switchPadding="10dp"
+            android:text="@string/single_day_mode"
+            android:textOff="@string/range_mode"
+            android:textOn="@string/single_day_mode" />
 
         <TextView
             android:id="@+id/textView"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dip"
-            android:layout_marginLeft="@dimen/title_margin_10"
-            android:layout_marginTop="@dimen/title_margin_10"
-            android:layout_marginEnd="@dimen/title_margin_10"
-            android:layout_marginRight="@dimen/title_margin_10"
-            android:text="@string/sync_data_for_title"
-            android:textSize="18sp" />
+            android:gravity="center"
+            android:text="@string/range_mode"
+            android:textColor="#000000" />
+
 
     </LinearLayout>
 
-    <LinearLayout
+    <com.archit.calendardaterangepicker.customviews.DateRangeCalendarView
+        android:id="@+id/calendarPicker"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="20dp"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/syncButton"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/synctoday"
-            android:visibility="visible"
-            tools:visibility="visible" />
-
-        <Button
-            android:id="@+id/sync7DaysButton"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/sync_7_days" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="20dp"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/numberOfDays"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:hint="@string/enter_number_of_days_to_sync_for"
-            android:inputType="numberSigned"
-            android:singleLine="true"
-            android:text="@string/_30" />
-
-        <Button
-            android:id="@+id/sync30DaysButton"
-            style="@android:style/Widget.DeviceDefault.Button.Small"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/title_margin_10"
-            android:gravity="center_vertical|end"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:text="@string/sync_30days" />
-    </LinearLayout>
+        custom:disable_date_color="#ABABAB"
+        custom:header_bg="@color/calendar_header"
+        custom:range_color="@color/range_color"
+        custom:selected_date_circle_color="@color/selected_date_circle_color"
+        custom:title_color="@color/calendar_title" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -170,6 +139,5 @@
     <ListView
         android:id="@+id/binning_list"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"></ListView>
-
+        android:layout_height="wrap_content" />
 </LinearLayout>

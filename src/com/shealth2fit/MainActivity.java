@@ -31,12 +31,11 @@ import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -44,6 +43,7 @@ import androidx.work.Constraints;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
+import com.archit.calendardaterangepicker.customviews.DateRangeCalendarView;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.fitness.FitnessOptions;
 import com.google.android.gms.fitness.data.DataType;
@@ -52,11 +52,13 @@ import com.samsung.android.sdk.healthdata.HealthDataStore;
 import com.samsung.android.sdk.healthdata.HealthPermissionManager.PermissionKey;
 import com.samsung.android.sdk.healthdata.HealthPermissionManager.PermissionResult;
 import com.samsung.android.sdk.healthdata.HealthResultHolder;
+import com.shealth2fit.util.DateUtil;
 import com.shealth2fit.util.NotificationUtil;
 import com.shealth2fit.util.SamsungHealthUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -86,14 +88,10 @@ public class MainActivity extends AppCompatActivity {
   TextView mDayTv;
   @BindView(R.id.binning_list)
   ListView mBinningListView;
-  @BindView(R.id.syncButton)
-  Button mSyncButton;
-  @BindView(R.id.sync7DaysButton)
-  Button mSync7DaysButton;
-  @BindView(R.id.sync30DaysButton)
-  Button mSync30DaysButton;
-  @BindView(R.id.numberOfDays)
-  EditText mNumberOfDays;
+  @BindView(R.id.singleMultiModeSwitch)
+  Switch mModeSwitch;
+  @BindView(R.id.calendarPicker)
+  DateRangeCalendarView mCalendar;
 
   private HealthDataStore mStore;
   private StepCountReader mReporter;
@@ -162,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
     }
   };
   private WorkManager workManager;
+  private boolean isRangeModeSelected = false;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -209,6 +208,45 @@ public class MainActivity extends AppCompatActivity {
     } else {
       checkForGooglePermissions();
     }
+
+    Calendar startSelectionDate = Calendar.getInstance();
+    startSelectionDate.setTimeInMillis(startSelectionDate.getTimeInMillis());
+
+    Calendar endSelectionDate = (Calendar) startSelectionDate.clone();
+    endSelectionDate.add(Calendar.DATE, 0);
+
+    mCalendar.setSelectedDateRange(startSelectionDate, endSelectionDate);
+
+    mCalendar.setCalendarListener(new DateRangeCalendarView.CalendarListener() {
+      @Override
+      public void onFirstDateSelected(@NonNull Calendar startDate) {
+        if (!isRangeModeSelected) {
+          mCalendar.setSelectedDateRange(startDate, startDate);
+
+          Calendar calendar = DateUtil.toUTC(startDate);
+          long mStartDateUTC = calendar.getTimeInMillis();
+
+          calendar.add(Calendar.DATE, +1);
+          long mEndDateUTC = calendar.getTimeInMillis();
+
+          syncDataForDate(mStartDateUTC, mEndDateUTC);
+        }
+      }
+
+      @Override
+      public void onDateRangeSelected(@NonNull Calendar startDate, @NonNull Calendar endDate) {
+        if (isRangeModeSelected) {
+          Calendar startUTCDate = DateUtil.toUTC(startDate);
+          Calendar endUTCDate = DateUtil.toUTC(endDate);
+          syncDataForDate(startUTCDate.getTimeInMillis(), endUTCDate.getTimeInMillis());
+        }
+      }
+    });
+
+    mModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+      isRangeModeSelected = isChecked;
+      mCalendar.resetAllSelectedViews();
+    });
   }
 
   private void checkForGooglePermissions() {
@@ -239,36 +277,6 @@ public class MainActivity extends AppCompatActivity {
       .build();
 
     workManager.enqueue(saveRequest);
-  }
-
-  @OnClick(R.id.syncButton)
-  public void syncOnClick() {
-    Log.i(TAG, "Sync for : " + mCurrentStartTime);
-    syncDataForDate(mCurrentStartTime, mCurrentStartTime + StepCountReader.ONE_DAY);
-  }
-
-  @OnClick(R.id.sync7DaysButton)
-  public void sync7DaysOnClick() {
-    Log.i(TAG, "Sync for last 7 Days");
-    long endTimeInMillis = TODAY_START_UTC_TIME;
-    long startTimeInMillis = endTimeInMillis - (StepCountReader.ONE_DAY * 7);
-
-    syncDataForDate(startTimeInMillis, endTimeInMillis);
-  }
-
-  @OnClick(R.id.sync30DaysButton)
-  public void sync30DaysOnClick() {
-    long endTimeInMillis = TODAY_START_UTC_TIME;
-
-    int daysCount = Integer.parseInt(mNumberOfDays.getText().toString());
-    Log.i(TAG, "Sync for last " + daysCount + " Days");
-
-    if (daysCount > 0) {
-      long startTimeInMillis = endTimeInMillis - (StepCountReader.ONE_DAY * daysCount);
-      syncDataForDate(startTimeInMillis, endTimeInMillis);
-    } else {
-      Toast.makeText(mContext, "Invalid Days count given", Toast.LENGTH_LONG).show();
-    }
   }
 
   private void syncDataForDate(long startTimeInMillis, long endTimeInMillis) {
