@@ -1,24 +1,7 @@
-/**
- * Copyright (C) 2014 Samsung Electronics Co., Ltd. All rights reserved.
- * <p>
- * Mobile Communication Division,
- * Digital Media & Communications Business, Samsung Electronics Co., Ltd.
- * <p>
- * This software and its documentation are confidential and proprietary
- * information of Samsung Electronics Co., Ltd.  No part of the software and
- * documents may be copied, reproduced, transmitted, translated, or reduced to
- * any electronic medium or machine-readable form without the prior written
- * consent of Samsung Electronics.
- * <p>
- * Samsung Electronics makes no representations with respect to the contents,
- * and assumes no responsibility for any errors that might appear in the
- * software and documents. This publication and the contents hereof are subject
- * to change without notice.
- */
-
 package com.shealth2fit;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -56,25 +39,21 @@ import com.shealth2fit.util.DateUtil;
 import com.shealth2fit.util.NotificationUtil;
 import com.shealth2fit.util.SamsungHealthUtil;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import butterknife.OnClick;
 
 import static com.shealth2fit.SyncWorker.DATE_END_TIMESTAMP_KEY;
 import static com.shealth2fit.SyncWorker.DATE_START_TIMESTAMP_KEY;
 import static com.shealth2fit.SyncWorker.SYNC_WORKER_TAG;
-import static com.shealth2fit.util.DateUtil.TODAY_START_UTC_TIME;
+import static com.shealth2fit.util.SamsungHealthUtil.calorieToString;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -84,8 +63,8 @@ public class MainActivity extends AppCompatActivity {
 
   @BindView(R.id.total_step_count)
   TextView mStepCountTv;
-  @BindView(R.id.date_view)
-  TextView mDayTv;
+  @BindView(R.id.total_calories_count)
+  TextView mCaloriesCountTv;
   @BindView(R.id.binning_list)
   ListView mBinningListView;
   @BindView(R.id.singleMultiModeSwitch)
@@ -95,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
   private HealthDataStore mStore;
   private StepCountReader mReporter;
-  private long mCurrentStartTime;
+  private long mTodayTimeInUTC;
   private final HealthResultHolder.ResultListener<PermissionResult> mPermissionListener =
    new HealthResultHolder.ResultListener<PermissionResult>() {
 
@@ -104,11 +83,11 @@ public class MainActivity extends AppCompatActivity {
        Map<PermissionKey, Boolean> resultMap = result.getResultMap();
        // Show a permission alarm and clear step count if permissions are not acquired
        if (resultMap.values().contains(Boolean.FALSE)) {
-         updateStepCountView("", new Date().getTime());
+         updateStepCountView("", 0);
          showPermissionAlarmDialog();
        } else {
          // Get the daily step count of a particular day and display it
-         mReporter.requestDailyStepCount(mCurrentStartTime);
+         mReporter.requestDailyStepCount(mTodayTimeInUTC);
        }
      }
    };
@@ -119,8 +98,7 @@ public class MainActivity extends AppCompatActivity {
     public void onConnected() {
       Log.d(TAG, "onConnected");
       if (SamsungHealthUtil.isPermissionAcquired(mStore)) {
-        mReporter.requestDailyStepCount(mCurrentStartTime);
-        mReporter.readSleepData();
+        mReporter.requestDailyStepCount(mTodayTimeInUTC);
       } else {
         SamsungHealthUtil.requestPermission(mStore, mActivity, mPermissionListener);
       }
@@ -144,14 +122,14 @@ public class MainActivity extends AppCompatActivity {
   private BinningListAdapter mBinningListAdapter;
   private final StepCountReader.StepCountObserver mStepCountObserver = new StepCountReader.StepCountObserver() {
     @Override
-    public void onChanged(long startTime, int count) {
-      Log.i(TAG, "onChanged: " + count);
-      updateStepCountView(String.valueOf(count), startTime);
+    public void onChanged(long startTime, int count, float totalCalories) {
+      updateStepCountView(String.valueOf(count), totalCalories);
     }
 
     @Override
-    public void onBinningDataChanged(int totalStepCount, List<StepCountReader.StepBinningData> binningCountList) {
-
+    public void onBinningDataChanged(int totalStepCount, float totalCalories, List<StepCountReader.StepBinningData> stepBinningDataList) {
+      updateStepCountView(String.valueOf(totalStepCount), totalCalories);
+      updateBinningChartView(stepBinningDataList);
     }
 
     @Override
@@ -168,15 +146,12 @@ public class MainActivity extends AppCompatActivity {
     setContentView(R.layout.activity_main);
     ButterKnife.bind(this);
 
+    mTodayTimeInUTC = DateUtil.toUTC(Calendar.getInstance()).getTimeInMillis();
     mActivity = this;
     mContext = this.getApplicationContext();
     workManager = WorkManager.getInstance(mContext);
 
     NotificationUtil.createNotificationChannel(mContext);
-
-    // Get the start time of today in local
-    mCurrentStartTime = TODAY_START_UTC_TIME;
-    mDayTv.setText(getFormattedTime());
 
     // Create a HealthDataStore instance and set its listener
     mStore = new HealthDataStore(this, mConnectionListener);
@@ -221,15 +196,20 @@ public class MainActivity extends AppCompatActivity {
       @Override
       public void onFirstDateSelected(@NonNull Calendar startDate) {
         if (!isRangeModeSelected) {
+          updateStepCountView("0", 0);
+
           mCalendar.setSelectedDateRange(startDate, startDate);
+          mCalendar.setSelected(true);
 
           Calendar calendar = DateUtil.toUTC(startDate);
           long mStartDateUTC = calendar.getTimeInMillis();
 
-          calendar.add(Calendar.DATE, +1);
-          long mEndDateUTC = calendar.getTimeInMillis();
+          long mEndDateUTC = Math.min(mStartDateUTC + StepCountReader.ONE_DAY, mTodayTimeInUTC);
 
           syncDataForDate(mStartDateUTC, mEndDateUTC);
+
+          mBinningListAdapter.changeDataSet(Collections.emptyList());
+          mReporter.requestDailyStepCount(mStartDateUTC);
         }
       }
 
@@ -238,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
         if (isRangeModeSelected) {
           Calendar startUTCDate = DateUtil.toUTC(startDate);
           Calendar endUTCDate = DateUtil.toUTC(endDate);
-          syncDataForDate(startUTCDate.getTimeInMillis(), endUTCDate.getTimeInMillis());
+          syncDataForDate(startUTCDate.getTimeInMillis(), Math.min(endUTCDate.getTimeInMillis(), mTodayTimeInUTC));
         }
       }
     });
@@ -259,6 +239,7 @@ public class MainActivity extends AppCompatActivity {
       );
       Log.i(TAG, "Got Google Fit Permissions");
     } else {
+      mReporter.requestDailyStepCount(mTodayTimeInUTC);
       setupWorker();
     }
   }
@@ -288,30 +269,22 @@ public class MainActivity extends AppCompatActivity {
 
   @Override
   public void onRequestPermissionsResult(int requestCode,
-                                         String[] permissions, int[] grantResults) {
+                                         @NonNull String[] permissions, @NonNull int[] grantResults) {
     switch (requestCode) {
       case MY_PERMISSIONS_REQUEST_ACTIVITY_RECOGNITION: {
         // If request is cancelled, the result arrays are empty.
         if (grantResults.length > 0
          && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-          Log.i(TAG, "Got Manifest Permissions");
-
-          // permission was granted, yay! Do the
-          // contacts-related task you need to do.
-        } else {
-          // permission denied, boo! Disable the
-          // functionality that depends on this permission.
+          checkForGooglePermissions();
         }
-        checkForGooglePermissions();
         return;
       }
       case REQUEST_OAUTH_REQUEST_CODE: {
         setupWorker();
         return;
       }
-
-      // other 'case' lines to check for other
-      // permissions this app might request.
+      default:
+        throw new IllegalStateException("Unexpected value: " + requestCode);
     }
   }
 
@@ -324,36 +297,14 @@ public class MainActivity extends AppCompatActivity {
   @Override
   public void onResume() {
     super.onResume();
-    mReporter.requestDailyStepCount(mCurrentStartTime);
+    mReporter.requestDailyStepCount(mTodayTimeInUTC);
   }
 
-  @OnClick(R.id.move_before)
-  void onClickBeforeButton() {
-    mCurrentStartTime -= StepCountReader.ONE_DAY;
-    mDayTv.setText(getFormattedTime());
-    mBinningListAdapter.changeDataSet(Collections.<StepCountReader.StepBinningData>emptyList());
-    mReporter.requestDailyStepCount(mCurrentStartTime);
-    syncDataForDate(mCurrentStartTime, mCurrentStartTime + StepCountReader.ONE_DAY);
-  }
-
-  @OnClick(R.id.move_next)
-  void onClickNextButton() {
-    mCurrentStartTime += StepCountReader.ONE_DAY;
-    mDayTv.setText(getFormattedTime());
-    mBinningListAdapter.changeDataSet(Collections.emptyList());
-    mReporter.requestDailyStepCount(mCurrentStartTime);
-  }
-
-  private String getFormattedTime() {
-    final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd (E)", Locale.US);
-    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    return dateFormat.format(mCurrentStartTime);
-  }
-
-  private void updateStepCountView(final String count, final long startTime) {
+  private void updateStepCountView(final String count, final float totalCalories) {
     // Display the today step count so far
     runOnUiThread(() -> {
       mStepCountTv.setText(count);
+      mCaloriesCountTv.setText(calorieToString(totalCalories));
 //            insertData(startTime, Integer.parseInt(count));
     });
   }
@@ -362,10 +313,6 @@ public class MainActivity extends AppCompatActivity {
     // the following code will be replaced with chart drawing code
     Log.i(TAG, "updateBinningChartView: " + stepBinningDataList.size());
     mBinningListAdapter.changeDataSet(stepBinningDataList);
-//        for (StepCountReader.StepBinningData data : stepBinningDataList) {
-//            Log.i(TAG, "TIME : " + data.time + "  COUNT : " + data.count);
-//        }
-//        insertMultiDataPoints(stepBinningDataList);
   }
 
   private void showPermissionAlarmDialog() {
@@ -468,6 +415,7 @@ public class MainActivity extends AppCompatActivity {
       return position;
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
 
@@ -476,7 +424,7 @@ public class MainActivity extends AppCompatActivity {
       }
 
       ((TextView) convertView.findViewById(android.R.id.text1))
-       .setText(mDataList.get(position).count + " steps");
+       .setText(mDataList.get(position).getCalorie() + " kcal " + mDataList.get(position).count + " steps");
 
       ((TextView) convertView.findViewById(android.R.id.text2))
        .setText(new Date(mDataList.get(position).time).toString());

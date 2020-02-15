@@ -61,4 +61,16 @@ public class DateUtil {
 
     return calendar;
   }
+
+  public static Calendar startOfWorld(){
+    Calendar cal = Calendar.getInstance();
+    cal.setTimeInMillis(0);
+    return cal;
+  }
+
+  public static Calendar addDaysFromToday(int i) {
+    Calendar cal = Calendar.getInstance();
+    cal.add(Calendar.DATE, i);
+    return cal;
+  }
 }

@@ -34,4 +34,6 @@
     <string name="splash_content_disclaimer">SHealth2Fit works with Samsung Health to sync data from Samsung Health app to Google Fit</string>
     <string name="single_day_mode">Single Day Mode</string>
     <string name="range_mode">Range Mode</string>
+    <string name="calorie_unit">kcal</string>
+    <string name="default_count">00.00</string>
 </resources>

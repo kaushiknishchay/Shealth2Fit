@@ -16,7 +16,7 @@ import com.shealth2fit.R;
 public class NotificationUtil {
 
   public static final String SYNC_WORKER_CHANNEL_ID = "Sync Service";
-  public static final int SYNC_WORKER_NOTIFICATION_ID = 12987;
+  private static final int SYNC_WORKER_NOTIFICATION_ID = 12987;
 
 
   public static void createNotificationChannel(Context mContext) {
@@ -32,16 +32,17 @@ public class NotificationUtil {
       channel.setDescription(description);
 
       NotificationManager notificationManager = mContext.getSystemService(NotificationManager.class);
-      notificationManager.createNotificationChannel(channel);
+      if (notificationManager != null) {
+        notificationManager.createNotificationChannel(channel);
+      }
     }
   }
 
-  public static NotificationCompat.Builder sendNotification(Context mContext, String title, String content, String channelId) {
-    return sendNotification(mContext, title, content, channelId, false);
+  public static void sendNotification(Context mContext, String title, String content, String channelId) {
+    sendNotification(mContext, title, content, channelId, false);
   }
 
-  public static NotificationCompat.Builder sendNotification(Context mContext, String title, String content, String channelId, boolean isOngoing) {
-
+  public static void sendNotification(Context mContext, String title, String content, String channelId, boolean isOngoing) {
     NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, channelId)
      .setSmallIcon(R.mipmap.ic_launcher)
      .setContentTitle(title)
@@ -57,6 +58,5 @@ public class NotificationUtil {
     NotificationManagerCompat notificationManager = NotificationManagerCompat.from(mContext);
     notificationManager.notify(SYNC_WORKER_NOTIFICATION_ID, builder.build());
 
-    return builder;
   }
 }

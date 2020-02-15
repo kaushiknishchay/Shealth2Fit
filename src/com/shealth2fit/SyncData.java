@@ -14,6 +14,7 @@ import java.util.List;
 
 import static com.shealth2fit.util.DateUtil.getDateStringFromUTCMillis;
 import static com.shealth2fit.util.NotificationUtil.SYNC_WORKER_CHANNEL_ID;
+import static com.shealth2fit.util.SamsungHealthUtil.calorieToString;
 
 class SyncData {
 
@@ -121,12 +122,12 @@ class SyncData {
 
   private final StepCountReader.StepCountObserver mStepCountObserver = new StepCountReader.StepCountObserver() {
     @Override
-    public void onChanged(long startTime, int count) {
-      Log.i(TAG, "onChanged: " + count);
+    public void onChanged(long startTime, int count, float totalCalories) {
+      Log.i(TAG, "onChanged: " + count + " calories " + totalCalories);
     }
 
     @Override
-    public void onBinningDataChanged(int totalStepCount, List<StepCountReader.StepBinningData> sHealthRecordedSteps) {
+    public void onBinningDataChanged(int totalStepCount, float totalCalories, List<StepCountReader.StepBinningData> sHealthRecordedSteps) {
       NotificationUtil.sendNotification(
        mContext,
        "Fetched Data from Samsung Health",
@@ -144,16 +145,10 @@ class SyncData {
       NotificationUtil.sendNotification(
        mContext,
        "Synced: " + mLocalStartDateString + "-" + mLocalEndDateString,
-       "Activity Count: " + sHealthRecordedSteps.size() + " (" + totalStepCount + " steps)",
+       "Calories: " + calorieToString(totalCalories) + " Steps: " + totalStepCount,
        SYNC_WORKER_CHANNEL_ID,
        false
       );
-    }
-
-    @Override
-    public void onBinningDataChanged(List<StepCountReader.StepBinningData> sHealthRecordedSteps) {
-      Log.i(TAG, "Got bin data, total points : " + sHealthRecordedSteps.size());
-      Log.i(TAG, "Bin Data : " + sHealthRecordedSteps.toString());
     }
   };
 }

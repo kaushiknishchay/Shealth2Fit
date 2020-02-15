@@ -1,21 +1,3 @@
-/**
- * Copyright (C) 2014 Samsung Electronics Co., Ltd. All rights reserved.
- * <p>
- * Mobile Communication Division,
- * Digital Media & Communications Business, Samsung Electronics Co., Ltd.
- * <p>
- * This software and its documentation are confidential and proprietary
- * information of Samsung Electronics Co., Ltd.  No part of the software and
- * documents may be copied, reproduced, transmitted, translated, or reduced to
- * any electronic medium or machine-readable form without the prior written
- * consent of Samsung Electronics.
- * <p>
- * Samsung Electronics makes no representations with respect to the contents,
- * and assumes no responsibility for any errors that might appear in the
- * software and documents. This publication and the contents hereof are subject
- * to change without notice.
- */
-
 package com.shealth2fit;
 
 import android.util.Log;
@@ -44,6 +26,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 import static com.shealth2fit.util.DateUtil.TODAY_START_UTC_TIME;
 
@@ -69,17 +52,15 @@ public class StepCountReader {
   }
 
   private static List<StepBinningData> getBinningData(byte[] zip, long startTime) {
-    // decompress ZIP
     String pattern = "yyyy-MM-dd";
-    SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+    SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern, Locale.getDefault());
 
     String date = simpleDateFormat.format(new Date(startTime));
-    SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+    SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
 
     List<StepBinningData> binningDataList = HealthDataUtil.getStructuredDataList(zip, StepBinningData.class);
     for (int i = binningDataList.size() - 1; i >= 0; i--) {
       StepBinningData binItem = binningDataList.get(i);
-//      Log.i(MainActivity.TAG, binItem.toString());
       if (binItem.count == 0) {
         binningDataList.remove(i);
       } else {
@@ -91,7 +72,7 @@ public class StepCountReader {
           e.printStackTrace();
         }
 
-        binningDataList.get(i).time = binDate.getTime();
+        binningDataList.get(i).time = Objects.requireNonNull(binDate).getTime();
       }
     }
 
@@ -134,7 +115,7 @@ public class StepCountReader {
   }
 
   // Get the daily total step count of a specified day
-  public void requestDailyStepCount(long startTime) {
+  void requestDailyStepCount(long startTime) {
     if (startTime >= TODAY_START_UTC_TIME) {
       // Get today step count
       readStepCount(startTime);
@@ -151,6 +132,7 @@ public class StepCountReader {
     AggregateRequest request = new AggregateRequest.Builder()
      .setDataType(HealthConstants.StepCount.HEALTH_DATA_TYPE)
      .addFunction(AggregateFunction.SUM, HealthConstants.StepCount.COUNT, ALIAS_TOTAL_COUNT)
+     .addFunction(AggregateFunction.SUM, HealthConstants.StepCount.CALORIE, HealthConstants.StepCount.CALORIE)
      .addGroup(HealthConstants.StepCount.DEVICE_UUID, ALIAS_DEVICE_UUID)
      .setLocalTimeRange(HealthConstants.StepCount.START_TIME, HealthConstants.StepCount.TIME_OFFSET,
       startTime, startTime + ONE_DAY)
@@ -160,6 +142,7 @@ public class StepCountReader {
     try {
       mResolver.aggregate(request).setResultListener(result -> {
         int totalCount = 0;
+        float totalCalories = 0;
         String deviceUuid = null;
 
         try {
@@ -167,6 +150,7 @@ public class StepCountReader {
           if (iterator.hasNext()) {
             HealthData data = iterator.next();
             totalCount = data.getInt(ALIAS_TOTAL_COUNT);
+            totalCalories += data.getFloat(HealthConstants.StepCount.CALORIE);
             deviceUuid = data.getString(ALIAS_DEVICE_UUID);
           }
         } finally {
@@ -174,7 +158,7 @@ public class StepCountReader {
         }
 
         if (mObserver != null) {
-          mObserver.onChanged(startTime, totalCount);
+          mObserver.onChanged(startTime, totalCount, totalCalories);
         }
 
         if (deviceUuid != null) {
@@ -195,13 +179,14 @@ public class StepCountReader {
 
     ReadRequest request = new ReadRequest.Builder()
      .setDataType(STEP_SUMMARY_DATA_TYPE_NAME)
-     .setProperties(new String[]{PROPERTY_COUNT, PROPERTY_BINNING_DATA})
+     .setProperties(new String[]{PROPERTY_COUNT, PROPERTY_BINNING_DATA, HealthConstants.StepCount.CALORIE})
      .setFilter(filter)
      .build();
 
     try {
       mResolver.read(request).setResultListener(result -> {
         int totalCount = 0;
+        float totalCalories = 0;
         List<StepBinningData> binningDataList = Collections.emptyList();
 
         try {
@@ -209,6 +194,7 @@ public class StepCountReader {
           if (iterator.hasNext()) {
             HealthData data = iterator.next();
             totalCount = data.getInt(PROPERTY_COUNT);
+            totalCalories = data.getFloat(HealthConstants.StepCount.CALORIE);
             byte[] binningData = data.getBlob(PROPERTY_BINNING_DATA);
             binningDataList = getBinningData(binningData, startTime);
           }
@@ -217,8 +203,8 @@ public class StepCountReader {
         }
 
         if (mObserver != null) {
-          mObserver.onChanged(startTime, totalCount);
-          mObserver.onBinningDataChanged(binningDataList);
+          mObserver.onChanged(startTime, totalCount, totalCalories);
+          mObserver.onBinningDataChanged(totalCount, totalCalories, binningDataList);
         }
 
       });
@@ -237,10 +223,11 @@ public class StepCountReader {
      HealthConstants.StepCount.DISTANCE
     };
 
-    List<StepBinningData> binningDataList = new ArrayList<StepBinningData>();
+    List<StepBinningData> binningDataList = new ArrayList<>();
 
     long startTimeLoop = startTime;
     int totalCount = 0;
+    float totalCalories = 0.0f;
 
     while (startTimeLoop < endTime) {
 
@@ -261,6 +248,7 @@ public class StepCountReader {
         if (iterator.hasNext()) {
           HealthData data = iterator.next();
           totalCount += data.getInt(PROPERTY_COUNT);
+          totalCalories += data.getFloat(HealthConstants.StepCount.CALORIE);
           byte[] binningData = data.getBlob(PROPERTY_BINNING_DATA);
 
           binningDataList.addAll(getBinningData(binningData, startTimeLoop));
@@ -281,8 +269,8 @@ public class StepCountReader {
     Log.i(TAG, "readStepDataForRange: " + binningDataList.size());
     Log.i(TAG, "totalCount: " + totalCount);
 
-    mObserver.onChanged(startTime, totalCount);
-    mObserver.onBinningDataChanged(totalCount, binningDataList);
+    mObserver.onChanged(startTime, totalCount, totalCalories);
+    mObserver.onBinningDataChanged(totalCount, totalCalories, binningDataList);
   }
 
   private void readStepCountBinning(final long startTime, String deviceUuid) {
@@ -294,6 +282,7 @@ public class StepCountReader {
     AggregateRequest request = new AggregateRequest.Builder()
      .setDataType(HealthConstants.StepCount.HEALTH_DATA_TYPE)
      .addFunction(AggregateFunction.SUM, HealthConstants.StepCount.COUNT, ALIAS_TOTAL_COUNT)
+     .addFunction(AggregateFunction.SUM, HealthConstants.StepCount.CALORIE, HealthConstants.StepCount.CALORIE)
      .setTimeGroup(TimeGroupUnit.MINUTELY, 10, HealthConstants.StepCount.START_TIME,
       HealthConstants.StepCount.TIME_OFFSET, ALIAS_BINNING_TIME)
      .setLocalTimeRange(HealthConstants.StepCount.START_TIME, HealthConstants.StepCount.TIME_OFFSET,
@@ -311,6 +300,7 @@ public class StepCountReader {
           for (HealthData data : result) {
             String binningTime = data.getString(ALIAS_BINNING_TIME);
             int binningCount = data.getInt(ALIAS_TOTAL_COUNT);
+            float binningCalories = data.getFloat(HealthConstants.StepCount.CALORIE);
 
             if (binningTime != null) {
               SimpleDateFormat dFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -321,7 +311,7 @@ public class StepCountReader {
                 e.printStackTrace();
               }
 
-              binningCountArray.add(new StepBinningData(binDate.getTime(), binningCount));
+              binningCountArray.add(new StepBinningData(binDate.getTime(), binningCount, binningCalories, 0));
             }
           }
 
@@ -339,11 +329,14 @@ public class StepCountReader {
   }
 
   public interface StepCountObserver {
-    void onChanged(long startTime, int count);
+    void onChanged(long startTime, int count, float totalCalories);
 
-    void onBinningDataChanged(int totalStepCount, List<StepBinningData> binningCountList);
+    void onBinningDataChanged(int totalStepCount, float totalCalories, List<StepBinningData> binningCountList);
 
-    void onBinningDataChanged(List<StepBinningData> binningCountList);
+    default void onBinningDataChanged(List<StepBinningData> binningCountList) {
+      Log.i(TAG, "onBinningDataChanged Size: " + binningCountList.size());
+      Log.i(TAG, "onBinningDataChanged toString: " + binningCountList.toString());
+    }
   }
 
   public static class StepBinningData implements Comparator<StepBinningData> {
@@ -355,8 +348,6 @@ public class StepCountReader {
     public StepBinningData(long time, int count) {
       this.time = time;
       this.count = count;
-//      this.calorie = 0;
-//      this.distance = 0;
     }
 
     public StepBinningData(long time, int count, float calorie, float distance) {

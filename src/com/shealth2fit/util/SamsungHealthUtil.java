@@ -10,6 +10,7 @@ import com.samsung.android.sdk.healthdata.HealthResultHolder;
 import com.shealth2fit.StepCountReader;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -48,6 +49,10 @@ public class SamsungHealthUtil {
     } catch (Exception e) {
       Log.e(TAG, "Permission setting fails.", e);
     }
+  }
+
+  public static String calorieToString(float calorie){
+    return String.format(Locale.getDefault(), "%.2f", calorie);
   }
 
 }
