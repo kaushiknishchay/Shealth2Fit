@@ -81,5 +81,9 @@ android {
                     'proguard-android-optimize.txt'),
                     'proguard-rules.pro'
         }
+        debug {
+            versionNameSuffix = '.debug'
+            applicationIdSuffix = '.debug'
+        }
     }
 }
