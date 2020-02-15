@@ -42,6 +42,8 @@ android {
         minSdkVersion 19
         targetSdkVersion 29
         applicationId = 'com.shealth2fit.com'
+        versionCode = 1
+        versionName = '1.0.0'
     }
 
     sourceSets {
